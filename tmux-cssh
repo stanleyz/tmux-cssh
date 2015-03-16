@@ -2,6 +2,7 @@
 
 THIS_BASENAME=$(basename "$0")
 TMUX_SESSION_NAME="tmux-cssh"
+OLDTMUX=$TMUX
 HOSTS=""
 USER=""
 IDENTITY=""
@@ -182,6 +183,16 @@ synchronizePanes() {
 	tmux set-window-option -t "$2" synchronize-panes ${syncValue}
 }
 
+# Switch client or attach session
+switchOrAttach() {
+  sessionName=$1
+  if [[ $(echo $OLDTMUX | wc -w) == 0 ]]; then
+    tmux attach-session -t $sessionName
+  else
+    tmux switch-client -t $sessionName
+  fi
+}
+
 # Check if tmux is available
 if [ "$(which tmux)" == "" ]; then
 	echo "${THIS_BASENAME}"
@@ -225,7 +236,7 @@ if (( $(tmux ls 2> /dev/null | grep "${TMUX_SESSION_NAME}" | wc -l) > 0 )) ; the
 	synchronizePanes ${SYNCHRONIZE_PANES} ${TMUX_SESSION_NAME}
 
 	# Attach to available tmux-session
-	tmux attach -t "${TMUX_SESSION_NAME}"
+	switchOrAttach "${TMUX_SESSION_NAME}"
 	exit
 fi
 
@@ -288,6 +299,9 @@ for host in ${HOSTS[@]}; do
 
 	# First Call, inits the tmux-session
 	if [ "${initTmuxCall}" == "true" ]; then
+    if [[ $(echo $TMUX | wc -w) != 0 ]]; then
+      unset TMUX
+    fi
 		tmux new-session -d -s "${TMUX_SESSION_NAME}" "${connectString}"
 
     # If our initial ssh connection has failed, do not mark initTmuxCall as false since tmux will have aborted.
@@ -313,4 +327,4 @@ fi
 synchronizePanes ${SYNCHRONIZE_PANES} ${TMUX_SESSION_NAME}
 
 # Attach to tmux session
-tmux attach-session -t "${TMUX_SESSION_NAME}"
+switchOrAttach "${TMUX_SESSION_NAME}"
