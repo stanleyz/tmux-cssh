@@ -11,6 +11,8 @@ SSH_COMMAND="ssh"
 SSH_ARGS=""
 SYNCHRONIZE_PANES="true"
 TMUX_LAYOUT="tiled"
+red_background="\033[33;31;7m"
+end_color="\033[0m"
 
 # Config-file in home directory
 CONFIG_FILENAME=".tmux-cssh"
@@ -310,7 +312,7 @@ for host in ${HOSTS[@]}; do
 		  initTmuxCall="false"
     fi
 	else
-    tmux split-window -t "${TMUX_SESSION_NAME}" "${connectString}" && \
+    tmux split-window -t "${TMUX_SESSION_NAME}" "${connectString} || { echo -e '${red_background}Error connecting to $host${end_color}'; sleep 20s; }" && \
     tmux select-layout -t "${TMUX_SESSION_NAME}" "${TMUX_LAYOUT}"
 	fi
 done
