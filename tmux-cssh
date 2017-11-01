@@ -310,6 +310,8 @@ for host in ${HOSTS[@]}; do
     # We'll need to try to start a new tmux session for the next host.
     if (( $(tmux ls 2> /dev/null | grep "${TMUX_SESSION_NAME}" | wc -l) > 0 )) ; then
       initTmuxCall="false"
+      # Attach to tmux session
+      switchOrAttach "${TMUX_SESSION_NAME}"
     fi
   else
     tmux split-window -t "${TMUX_SESSION_NAME}" "${connectString} || { echo -e 'Error connecting to ${red_background}$host${end_color}'; sleep 20s; }" && \
@@ -327,6 +329,3 @@ fi
 
 # Setup synchronizing panes
 synchronizePanes ${SYNCHRONIZE_PANES} ${TMUX_SESSION_NAME}
-
-# Attach to tmux session
-switchOrAttach "${TMUX_SESSION_NAME}"
