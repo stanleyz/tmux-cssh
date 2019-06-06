@@ -53,9 +53,6 @@ syntax() {
   echo "-set | --set-epoch-time                    Like -ts, but quickly set the current epoch time, overwrites -ts"
   echo
 
-  echo "-ns | --new-session                        Initializes a new session, like -ts [name]."
-  echo
-
   echo "-q | --quiet                               Quiet-mode."
   echo
 
@@ -112,7 +109,6 @@ analyseParameters() {
         esac
         shift;;
       -set|--set-epoch-time) TMUX_SESSION_NAME="$(date +"%s")";;
-      -ns|--new-session) TMUX_SESSION_NAME="${TMUX_SESSION_NAME}_$(date +%s)";;
       -q|-quiet) QUIET="true";;
       -f|--filename) FILENAME="${FILENAME} $2"; shift;;
       -cs|--config-setting)
@@ -232,16 +228,6 @@ if [ "$FILENAME" != "" ]; then
   done
 fi
 
-# Check if tmux-session is available
-if (( $(tmux ls 2> /dev/null | grep "${TMUX_SESSION_NAME}" | wc -l) > 0 )) ; then
-  # Setup synchronizing panes
-  synchronizePanes ${SYNCHRONIZE_PANES} ${TMUX_SESSION_NAME}
-
-  # Attach to available tmux-session
-  switchOrAttach "${TMUX_SESSION_NAME}"
-  exit
-fi
-
 # Hosts available ?
 if [ "${HOSTS}" == "" ]; then
   output "* Hosts not given."
@@ -304,14 +290,18 @@ for host in ${HOSTS[@]}; do
     if [[ $(echo $TMUX | wc -w) != 0 ]]; then
       unset TMUX
     fi
-    tmux new-session -d -s "${TMUX_SESSION_NAME}" "${connectString}"
 
-    # If our initial ssh connection has failed, do not mark initTmuxCall as false since tmux will have aborted.
-    # We'll need to try to start a new tmux session for the next host.
+    # Check if tmux-session is available
     if (( $(tmux ls 2> /dev/null | grep "${TMUX_SESSION_NAME}" | wc -l) > 0 )) ; then
-      initTmuxCall="false"
-      # Attach to tmux session
+      # Start the cssh in a window
+      tmux new-window -t "${TMUX_SESSION_NAME}" "${connectString}"
+    else
+      tmux new-session -d -s "${TMUX_SESSION_NAME}" "${connectString}"
+    fi
+
+    if [[ $? == 0 ]]; then
       switchOrAttach "${TMUX_SESSION_NAME}"
+      [ $? == 0 ] && initTmuxCall="false"
     fi
   else
     tmux split-window -t "${TMUX_SESSION_NAME}" "${connectString} || { echo -e 'Error connecting to ${red_background}$host${end_color}'; sleep 20s; }" && \
